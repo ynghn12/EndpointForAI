@@ -30,10 +30,11 @@ Never hardcode A-system URLs or credentials; load them from environment variable
 - Added README guidance for building/running (`mvn clean compile`, `mvn exec:java`), IntelliJ workflow tips, and the `curl` smoke command for exercising `POST /ai_ears`.
 - Resolved a serialization import issue by adding the `akka-http-spray-json_2.13` dependency (around line 47 of `pom.xml`), ensuring IntelliJ can run `AiEarsServer` cleanly.
 - Manually verified the endpoint via `curl -X POST http://localhost:8080/ai_ears -H "Content-Type: application/json" -d '{"eqpId":"EQP-12345","scenario":"heat-treatment-v1"}'`, which returns `202` with the acknowledgement response.
-- Current git state: the dependency fix in `pom.xml` is committed locally but not yet pushed; context notes previously lived in `AGENT.md`/`summary.md` as uncommitted helpers.
+- 2025-11-19: `/ai_ears` 라우트가 요청 헤더/바디 검증, `X-Request-Id` 전달, 필수 필드만 추려서 A 시스템에 POST, 응답 바디를 그대로 upstream으로 반환하도록 확장됨. 5xx/예외 시 재시도 없이 `502` JSON 에러와 상세 로그를 남기며, `A_SYSTEM_URL` 환경변수로 다운스트림 URL을 주입하도록 구성. 관련 변경 사항은 `Implement downstream forwarding` 커밋으로 `origin/main`에 푸시됨.
+- 같은 날 `mvn clean compile`를 시도했으나 실행 환경에 Maven CLI가 없어 실패; 로컬에서 재확인이 필요.
 
 ### Outstanding / Next Steps
-1. Flesh out the `/ai_ears` handler per `docs/design.md`: call A 시스템 (GET destination info, POST transformed payload) and encapsulate the transformation logic.
-2. Define precise JSON schemas and authentication for both client requests and the downstream A 시스템 integration.
-3. Implement robust error handling, logging, and alerting aligned with the design doc, covering validation, timeouts, and retries.
-4. Add automated route tests using ScalaTest + akka-http-testkit for both the happy path and representative failure cases before landing new behavior.
+1. 바디 변환 및 목적지 조회(사전 GET `EARS/Service/Multi?index=...`) 로직을 설계서 수준까지 구현해 현재 임시 환경변수 기반 POST를 대체.
+2. 외부 요청 및 다운스트림 A 시스템 프롬프트의 JSON 스키마·인증 세부정보 확정 후 코드/테스트에 반영.
+3. 기존 로그/검증을 확장해 타임아웃, 재시도 없음 정책, 알림 훅을 포함한 회복력 시나리오를 완성.
+4. ScalaTest + akka-http-testkit으로 정상/오류 경로를 검증하는 회귀 테스트를 추가하고 `mvn test` 파이프라인에서 실행 가능하도록 환경(Maven) 상태를 확인.
