@@ -96,8 +96,10 @@ object AiEarsServer extends App with JsonSupport {
     )
 
     val downstreamHeaders = requestId.map(id => RawHeader("X-Request-Id", id)).toList
-    val httpRequest =
-      HttpRequest(method = HttpMethods.POST, uri = aSystemUri, entity = entity).withHeaders(downstreamHeaders: _*)
+    val baseRequest = HttpRequest(method = HttpMethods.POST, uri = aSystemUri, entity = entity)
+    val httpRequest = downstreamHeaders.foldLeft(baseRequest) { (req, header) =>
+      req.addHeader(header)
+    }
     val start = System.nanoTime()
 
     Http()
